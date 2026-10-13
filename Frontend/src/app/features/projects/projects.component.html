@@ -1,0 +1,118 @@
+<header class="page-head">
+  <div>
+    <h1>Projects</h1>
+    <p class="lede">
+      @if (auth.isClient()) { The rooms the studio is designing for you. }
+      @else if (auth.isDesigner()) { Projects where you are the lead designer. }
+      @else { Residences and commercial rooms moving through design, review, and issue. }
+    </p>
+  </div>
+  @if (auth.isManager()) {
+    <button class="btn primary" type="button" (click)="open.set(true)">New project</button>
+  }
+</header>
+
+<div class="toolbar">
+  <input style="max-width:320px" placeholder="Search name, code, or client" [(ngModel)]="query" name="query" />
+  <select style="max-width:200px" [(ngModel)]="status" name="status">
+    <option>All</option>
+    <option>Draft</option>
+    <option>Active</option>
+    <option>InReview</option>
+    <option>NeedsAttention</option>
+    <option>OnHold</option>
+    <option>Completed</option>
+  </select>
+  <div class="seg">
+    <button type="button" [class.on]="view() === 'cards'" (click)="setView('cards')">Cards</button>
+    <button type="button" [class.on]="view() === 'table'" (click)="setView('table')">Table</button>
+  </div>
+</div>
+
+@if (loading()) {
+  <div class="card-grid">
+    @for (item of [1, 2, 3]; track item) { <article class="project-card"><div class="sk" style="height:92px"></div></article> }
+  </div>
+} @else if (!filtered.length) {
+  <div class="card empty"><h2>No projects here</h2><p>Adjust the filter, or create a project for a client.</p></div>
+} @else if (view() === 'cards') {
+  <div class="card-grid">
+    @for (project of filtered; track project.projectId) {
+      <a class="project-card" [routerLink]="['/projects', project.projectId]">
+        <div class="cover" [class]="tone(project.status)"></div>
+        <div class="meta"><span>{{ project.code }}</span><span [class]="'chip ' + tone(project.status)">{{ labelize(project.status) }}</span></div>
+        <h2 style="font-size:1.25rem">{{ project.name }}</h2>
+        <p class="muted">{{ project.clientName }}</p>
+        @if (!auth.isDesigner()) {
+          <div class="progress" aria-hidden="true"><span [style.width.%]="spentRatio(project)"></span></div>
+          <div class="meta">
+            <span>{{ money(project.spent, project.currency) }} of {{ money(project.budget, project.currency) }}</span>
+            <span>Due {{ prettyDate(project.dueDate) }}</span>
+          </div>
+        } @else {
+          <div class="meta"><span>Due {{ prettyDate(project.dueDate) }}</span><span>{{ project.leadDesignerName }}</span></div>
+        }
+        <div class="meta">
+          <span>{{ project.openIssueCount }} open issues</span>
+          @if (auth.isManager()) { <span>{{ project.proposedTaskCount }} proposed</span> }
+        </div>
+      </a>
+    }
+  </div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Code</th><th>Project</th><th>Client</th><th>Status</th><th>Due</th><th>Issues</th></tr></thead>
+      <tbody>
+        @for (project of filtered; track project.projectId) {
+          <tr [routerLink]="['/projects', project.projectId]">
+            <td>{{ project.code }}</td>
+            <td>{{ project.name }}</td>
+            <td>{{ project.clientName }}</td>
+            <td><span [class]="'chip ' + tone(project.status)">{{ labelize(project.status) }}</span></td>
+            <td>{{ prettyDate(project.dueDate) }}</td>
+            <td>{{ project.openIssueCount }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (open()) {
+  <div class="backdrop" (click)="open.set(false)">
+    <form class="drawer" (click)="$event.stopPropagation()" (ngSubmit)="save()">
+      <p class="eyebrow">New commission</p>
+      <h2>Create a project</h2>
+      <label class="field"><span>Client</span>
+        <select name="client" [(ngModel)]="clientId" required>
+          <option value="">Select</option>
+          @for (client of clients(); track client.clientId) {
+            <option [value]="client.clientId">{{ client.companyName }}</option>
+          }
+        </select>
+      </label>
+      <label class="field"><span>Code</span><input name="code" [(ngModel)]="code" placeholder="NW-2BHK-002" required /></label>
+      <label class="field"><span>Name</span><input name="name" [(ngModel)]="name" required /></label>
+      <label class="field"><span>Description</span><textarea name="description" [(ngModel)]="description"></textarea></label>
+      <label class="field"><span>Budget (USD)</span><input name="budget" type="number" [(ngModel)]="budget" min="0" /></label>
+      <label class="field"><span>Due</span><input name="due" type="date" [(ngModel)]="dueDate" /></label>
+      <label class="field"><span>Project manager</span>
+        <select name="pm" [(ngModel)]="projectManagerId">
+          <option value="">Unassigned</option>
+          @for (person of managers(); track person.userId) { <option [value]="person.userId">{{ person.fullName }}</option> }
+        </select>
+      </label>
+      <label class="field"><span>Lead designer</span>
+        <select name="designer" [(ngModel)]="leadDesignerId">
+          <option value="">Unassigned</option>
+          @for (person of designers(); track person.userId) { <option [value]="person.userId">{{ person.fullName }}</option> }
+        </select>
+      </label>
+      <div class="page-actions">
+        <button class="btn primary" type="submit">Create project</button>
+        <button class="btn ghost" type="button" (click)="open.set(false)">Cancel</button>
+      </div>
+    </form>
+  </div>
+}

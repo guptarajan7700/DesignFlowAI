@@ -1,0 +1,38 @@
+<header class="page-head">
+  <div>
+    <h1>Model studio</h1>
+    <p class="lede">Orbit, pan, and zoom the project model with the Autodesk Viewer toolbar.</p>
+  </div>
+  <select style="max-width:280px" [(ngModel)]="projectId" name="project" (ngModelChange)="load()">
+    @for (project of projects(); track project.projectId) {
+      <option [value]="project.projectId">{{ project.code }} · {{ project.name }}</option>
+    }
+  </select>
+</header>
+
+<section class="stage" [class.live]="session()?.status === 'Ready'">
+  <div #viewerHost class="viewer-host"></div>
+  @if (session()?.status !== 'Ready') {
+    <div class="room"><div class="floor"></div><div class="wall"></div></div>
+  }
+  <div class="viewer-copy">
+    <p class="eyebrow">{{ session()?.status === 'Ready' ? 'Autodesk Viewer' : 'Model studio' }}</p>
+    <h2>{{ session()?.modelName || detail()?.models?.[0]?.name || 'No model yet' }}</h2>
+    @if (session()?.status !== 'Ready') {
+      <p>{{ statusText() }}</p>
+    }
+  </div>
+</section>
+
+<section class="card-grid" style="margin-top:16px">
+  @for (issue of issues(); track issue.issueId) {
+    <article class="card">
+      <span [class]="'chip ' + tone(issue.severity)">{{ issue.severity }}</span>
+      <h3 style="margin-top:8px">{{ issue.title }}</h3>
+      <p class="muted">Element {{ issue.elementId || '—' }} · {{ issue.assignedToName || 'Unassigned' }}</p>
+    </article>
+  }
+  @if (!issues().length) {
+    <article class="card empty">This project has no open issues in the database.</article>
+  }
+</section>

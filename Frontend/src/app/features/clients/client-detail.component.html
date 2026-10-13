@@ -1,0 +1,46 @@
+@if (missing()) {
+  <div class="card empty"><h1>Client not found</h1><a class="btn" routerLink="/clients">Back to clients</a></div>
+} @else if (!client()) {
+  <div class="card"><div class="sk"></div></div>
+} @else {
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">{{ client()!.city || 'Studio client' }}</p>
+      <h1>{{ client()!.companyName }}</h1>
+      <p class="lede">{{ client()!.contactName }} · {{ client()!.email }}</p>
+    </div>
+    <span [class]="'chip ' + tone(client()!.status)">{{ client()!.status }}</span>
+  </header>
+  <div class="tabs">
+    <button type="button" [class.on]="tab() === 'overview'" (click)="tab.set('overview')">Overview</button>
+    <button type="button" [class.on]="tab() === 'projects'" (click)="tab.set('projects')">Projects</button>
+  </div>
+  @if (tab() === 'overview') {
+    <section class="two">
+      <article class="card">
+        <h2>Contact</h2>
+        <p>{{ client()!.contactName }}</p>
+        <p class="muted">{{ client()!.email }}</p>
+        <p class="muted">{{ client()!.phone || 'No phone on file' }}</p>
+        <p>{{ client()!.city || 'City not set' }}{{ client()!.country ? ', ' + client()!.country : '' }}</p>
+      </article>
+      <article class="card">
+        <h2>Work together</h2>
+        <p class="lede">{{ related().length }} project{{ related().length === 1 ? '' : 's' }} linked by company name.</p>
+        <a class="btn primary" routerLink="/projects">Start from projects</a>
+      </article>
+    </section>
+  } @else {
+    <div class="card-grid">
+      @for (project of related(); track project.projectId) {
+        <a class="project-card" [routerLink]="['/projects', project.projectId]">
+          <div class="cover" [class]="tone(project.status)"></div>
+          <strong>{{ project.name }}</strong>
+          <div class="meta"><span>{{ project.code }}</span><span>{{ prettyDate(project.dueDate) }}</span></div>
+          <span [class]="'chip ' + tone(project.status)">{{ labelize(project.status) }}</span>
+        </a>
+      }
+      @if (!related().length) { <div class="card empty">No projects for this client yet.</div> }
+    </div>
+  }
+}

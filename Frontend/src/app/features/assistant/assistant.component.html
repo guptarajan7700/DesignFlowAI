@@ -1,0 +1,52 @@
+<div class="chat">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)">
+    <div>
+      <strong>Studio assistant</strong>
+      <div class="muted" style="font-size:0.8rem">Answers come from project records. Checks wait for confirmation.</div>
+    </div>
+    @if (embedded()) {
+      <button class="icon-btn" type="button" (click)="closed.emit()" aria-label="Close assistant"><app-icon name="x" /></button>
+    }
+  </div>
+  <div class="thread">
+    @for (message of chat.messages(); track message.id) {
+      <div class="bubble" [class.user]="message.role === 'user'" [class.assistant]="message.role === 'assistant'">
+        {{ message.text }}
+        @if (message.source) {
+          <div style="opacity:.7;font-size:.75rem;margin-top:6px">{{ message.source }}</div>
+        }
+        @if (message.preview) {
+          <div class="preview">
+            <strong>{{ message.preview.detectedCommand }}</strong>
+            <p>{{ message.preview.impact }}</p>
+            <div class="page-actions">
+              <button class="btn teal" type="button" [disabled]="chat.busy()" (click)="confirm(message.preview.previewId, message.id)">Confirm</button>
+              <button class="btn ghost" type="button" (click)="cancel(message.id)">Cancel</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+    @if (chat.busy()) {
+      <div class="bubble assistant"><div class="sk" style="width:140px"></div></div>
+    }
+  </div>
+  <div style="padding:0 12px 8px;display:flex;gap:6px;flex-wrap:wrap">
+    @for (prompt of prompts; track prompt) {
+      <button class="chip" type="button" (click)="usePrompt(prompt)">{{ prompt }}</button>
+    }
+  </div>
+  @if (!embedded()) {
+    <div style="padding:0 12px 8px">
+      <select [(ngModel)]="projectId" name="project">
+        @for (project of projects(); track project.projectId) {
+          <option [value]="project.projectId">{{ project.code }} · {{ project.name }}</option>
+        }
+      </select>
+    </div>
+  }
+  <form class="composer" (ngSubmit)="send()">
+    <input name="draft" [(ngModel)]="draft" placeholder="Ask about the studio or preview a model check" />
+    <button class="btn primary" type="submit" [disabled]="chat.busy()"><app-icon name="send" /></button>
+  </form>
+</div>

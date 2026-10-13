@@ -1,0 +1,66 @@
+<header class="page-head">
+  <div>
+    <h1>Clients</h1>
+    <p class="lede">Households and companies the studio is designing for.</p>
+  </div>
+  <button class="btn primary" type="button" (click)="open.set(true)">New client</button>
+</header>
+
+<div class="toolbar">
+  <input style="max-width:360px" placeholder="Search company, contact, or city" [(ngModel)]="query" name="query" />
+</div>
+
+@if (loading()) {
+  <div class="card"><div class="sk"></div><div class="sk" style="margin-top:10px"></div></div>
+} @else if (!filtered.length) {
+  <div class="card empty"><h2>No clients match</h2><p>Add a household or company to start a project.</p></div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Client</th><th>Contact</th><th>City</th><th>Projects</th><th>Status</th></tr></thead>
+      <tbody>
+        @for (client of filtered; track client.clientId) {
+          <tr [routerLink]="['/clients', client.clientId]">
+            <td>
+              <div style="display:flex;gap:10px;align-items:center">
+                <span class="avatar-sm">{{ initials(client.companyName) }}</span>
+                <div><strong>{{ client.companyName }}</strong><div class="muted">{{ client.email }}</div></div>
+              </div>
+            </td>
+            <td>{{ client.contactName }}</td>
+            <td>{{ client.city || '—' }}</td>
+            <td>{{ projectCount(client.companyName) }}</td>
+            <td><span [class]="'chip ' + tone(client.status)">{{ client.status }}</span></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (open()) {
+  <div class="backdrop" (click)="open.set(false)">
+    <form class="drawer" (click)="$event.stopPropagation()" (ngSubmit)="save()">
+      <p class="eyebrow">New relationship</p>
+      <h2>Add a client</h2>
+      <label class="field"><span>Company</span><input name="company" [(ngModel)]="companyName" required /></label>
+      <label class="field"><span>Contact</span><input name="contact" [(ngModel)]="contactName" required /></label>
+      <label class="field"><span>Email</span><input name="email" type="email" [(ngModel)]="email" required /></label>
+      <label class="field"><span>Phone</span><input name="phone" [(ngModel)]="phone" /></label>
+      <label class="field"><span>City</span><input name="city" [(ngModel)]="city" /></label>
+      <label class="field"><span>Country</span><input name="country" [(ngModel)]="country" /></label>
+      <label class="field">
+        <span>Status</span>
+        <select name="status" [(ngModel)]="status">
+          <option>Prospect</option>
+          <option>Active</option>
+          <option>Inactive</option>
+        </select>
+      </label>
+      <div class="page-actions">
+        <button class="btn primary" type="submit">Save client</button>
+        <button class="btn ghost" type="button" (click)="open.set(false)">Cancel</button>
+      </div>
+    </form>
+  </div>
+}

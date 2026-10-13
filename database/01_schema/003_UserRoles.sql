@@ -1,0 +1,20 @@
+/*
+    UserRoles — a user may hold more than one role.
+*/
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
+IF OBJECT_ID(N'dbo.UserRoles', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.UserRoles
+    (
+        UserRoleId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_UserRoles PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+        UserId     UNIQUEIDENTIFIER NOT NULL,
+        RoleId     UNIQUEIDENTIFIER NOT NULL,
+        CreatedAt  DATETIME2        NOT NULL CONSTRAINT DF_UserRoles_CreatedAt DEFAULT (SYSUTCDATETIME()),
+        UpdatedAt  DATETIME2        NOT NULL CONSTRAINT DF_UserRoles_UpdatedAt DEFAULT (SYSUTCDATETIME()),
+        CreatedBy  UNIQUEIDENTIFIER NULL
+    );
+END
+GO

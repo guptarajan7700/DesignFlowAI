@@ -1,0 +1,20 @@
+/*
+    Roles — Admin, ProjectManager, Designer, Client.
+*/
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
+IF OBJECT_ID(N'dbo.Roles', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Roles
+    (
+        RoleId      UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_Roles PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+        Name        NVARCHAR(50)     NOT NULL,
+        Description NVARCHAR(250)    NULL,
+        CreatedAt   DATETIME2        NOT NULL CONSTRAINT DF_Roles_CreatedAt DEFAULT (SYSUTCDATETIME()),
+        UpdatedAt   DATETIME2        NOT NULL CONSTRAINT DF_Roles_UpdatedAt DEFAULT (SYSUTCDATETIME()),
+        CreatedBy   UNIQUEIDENTIFIER NULL
+    );
+END
+GO

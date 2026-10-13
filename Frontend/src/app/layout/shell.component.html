@@ -1,0 +1,122 @@
+<div class="app-shell" [class.collapsed]="collapsed()" [class.nav-open]="mobileOpen()">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/dashboard">
+      <div class="mark">DF</div>
+      <div class="brand-copy">
+        <strong>DesignFlow</strong>
+        <span>Interior studio</span>
+      </div>
+    </a>
+    <nav class="nav">
+      @for (item of visibleNav(); track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active">
+          <app-icon [name]="item.icon" />
+          <span class="nav-label">{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+    <div class="side-foot">
+      <button class="side-user" type="button" (click)="menuOpen.set(!menuOpen())">
+        <div class="avatar">{{ initials() }}</div>
+        <span>
+          <strong>{{ auth.displayName() }}</strong>
+          <small>{{ labelize(auth.roles()[0] || 'Member') }}</small>
+        </span>
+      </button>
+      <button class="ghost-icon" type="button" (click)="toggleSidebar()">
+        <app-icon name="menu" />
+        <span class="nav-label">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar">
+      <button class="icon-btn" type="button" (click)="toggleSidebar()" aria-label="Menu">
+        <app-icon name="menu" />
+      </button>
+      <button class="search-btn" type="button" (click)="openPalette()">
+        <app-icon name="search" />
+        <span>{{ auth.isClient() ? 'Search your projects' : 'Search projects and pages' }}</span>
+        <kbd>Ctrl K</kbd>
+      </button>
+      <div class="top-actions">
+        <button class="icon-btn" type="button" (click)="theme.toggle()" [attr.aria-label]="theme.mode() === 'dark' ? 'Use light mode' : 'Use dark mode'">
+          <app-icon [name]="theme.mode() === 'dark' ? 'sun' : 'moon'" />
+        </button>
+        <div class="bell-wrap">
+          <button class="icon-btn" type="button" (click)="bellOpen.set(!bellOpen()); menuOpen.set(false)" aria-label="Notifications">
+            <app-icon name="bell" />
+            @if (unread()) { <span class="badge">{{ unread() }}</span> }
+          </button>
+          @if (bellOpen()) {
+            <div class="dropdown">
+              <strong style="padding:10px">Notifications</strong>
+              @if (!notes().length) {
+                <p class="muted" style="padding:10px">You are all caught up.</p>
+              }
+              @for (note of notes(); track note.notificationId) {
+                <button class="note" [class.unread]="!note.isRead" type="button" (click)="mark(note)">
+                  <strong>{{ note.title }}</strong>
+                  <small>{{ note.message }}</small>
+                  <small>{{ relative(note.createdAt) }}</small>
+                </button>
+              }
+            </div>
+          }
+        </div>
+        @if (auth.isStaff()) {
+          <button class="ai-btn" type="button" (click)="aiOpen.set(!aiOpen())">
+            <app-icon name="spark" />
+            <span>Ask AI</span>
+          </button>
+        }
+        <div class="menu-wrap">
+          <button class="icon-btn" type="button" (click)="menuOpen.set(!menuOpen()); bellOpen.set(false)">
+            <span class="avatar-sm">{{ initials() }}</span>
+          </button>
+          @if (menuOpen()) {
+            <div class="dropdown" style="width:220px">
+              <button type="button" (click)="go('/settings')">Profile & settings</button>
+              <button type="button" (click)="logout()">Sign out</button>
+            </div>
+          }
+        </div>
+      </div>
+    </header>
+
+    <div class="page">
+      <p class="eyebrow">DesignFlow AI · {{ crumbs() }}</p>
+      <router-outlet />
+    </div>
+  </div>
+</div>
+
+@if (paletteOpen()) {
+  <div class="backdrop center" (click)="paletteOpen.set(false)">
+    <div class="palette" (click)="$event.stopPropagation()">
+      <input placeholder="Jump to a page or project" [value]="query()" (input)="query.set($any($event.target).value)" autofocus />
+      @for (item of paletteItems(); track item.path) {
+        <button type="button" (click)="go(item.path)">
+          <span>{{ item.label }}</span>
+          <small>{{ item.hint }}</small>
+        </button>
+      }
+      @if (!paletteItems().length) {
+        <p class="empty">Nothing matches that search.</p>
+      }
+    </div>
+  </div>
+}
+
+@if (aiOpen() && !onAssistant() && auth.isStaff()) {
+  <aside class="dock" aria-label="AI assistant">
+    <app-assistant [embedded]="true" (closed)="aiOpen.set(false)" />
+  </aside>
+}
+
+<div class="toasts" aria-live="polite">
+  @for (toast of toasts.items(); track toast.id) {
+    <button class="toast" [class]="'toast ' + toast.tone" type="button" (click)="toasts.dismiss(toast.id)">{{ toast.text }}</button>
+  }
+</div>

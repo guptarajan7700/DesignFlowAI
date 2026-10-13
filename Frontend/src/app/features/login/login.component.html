@@ -1,0 +1,58 @@
+<section class="login">
+  <div class="hero">
+    <div class="orb a"></div>
+    <div class="orb b"></div>
+    <div class="orb c"></div>
+    <div class="hero-inner">
+      <div class="brand" style="padding-left:0">
+        <div class="mark">DF</div>
+        <div class="brand-copy">
+          <strong>DesignFlow AI</strong>
+          <span>Interior CRM & model studio</span>
+        </div>
+      </div>
+      <div style="max-width:560px;margin-top:48px">
+        <p class="eyebrow" style="color:#c4b5fd">For studios that design in Revit</p>
+        <h1 style="font-size:clamp(2.6rem,5vw,4.4rem);line-height:.95">Rooms, schedules, and model checks. One calm workspace.</h1>
+        <p style="color:#ddd6fe;font-size:1.05rem;max-width:46ch">Follow clients from the first brief to issued sheets. AI proposes work. Managers approve it. Validation defects stay the ones the model actually found.</p>
+      </div>
+      <div class="floaters">
+        <article class="stat-float"><span class="stat-label">Northwind residence</span><strong>Needs attention · 2 open issues</strong></article>
+        <article class="stat-float"><span class="stat-label">Harbor loft</span><strong>Cove lighting is overdue</strong></article>
+        <article class="stat-float"><span class="stat-label">Validation</span><strong>Pass rate is calculated from stored checks</strong></article>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <form class="login-card" (ngSubmit)="submit()">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <p class="eyebrow">Sign in</p>
+        <button class="icon-btn" type="button" (click)="theme.toggle()" aria-label="Toggle theme">
+          <app-icon [name]="theme.mode() === 'dark' ? 'sun' : 'moon'" />
+        </button>
+      </div>
+      <h2 style="font-size:2rem;margin:8px 0 6px">Welcome back</h2>
+      <p class="lede">Use a studio account. The sample password is shared across the seeded team.</p>
+      <label class="field" style="margin-top:22px">
+        <span>Email</span>
+        <input name="email" type="email" [(ngModel)]="email" autocomplete="username" required />
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input name="password" type="password" [(ngModel)]="password" autocomplete="current-password" required />
+      </label>
+      <p class="error">{{ error() }}</p>
+      <button class="btn primary" type="submit" [disabled]="busy()" style="width:100%">
+        {{ busy() ? 'Signing in…' : 'Enter the studio' }}
+      </button>
+      <div class="personas">
+        @for (persona of personas; track persona.email) {
+          <button class="persona" type="button" [class.on]="email === persona.email" (click)="pick(persona.email)">
+            <span><strong>{{ persona.name }}</strong><br><small class="muted">{{ persona.role }}</small></span>
+            <small>{{ persona.email }}</small>
+          </button>
+        }
+      </div>
+    </form>
+  </div>
+</section>

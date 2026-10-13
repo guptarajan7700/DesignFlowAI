@@ -1,69 +1,66 @@
-# Backend
+# DesignFlow AI
 
-ASP.NET Core 8 Web API for DesignFlow AI. Clean Architecture, EF Core against the existing SQL Server database, JWT roles, Swagger, and a background job worker.
+Intelligent interior-design CRM and Revit automation platform for design firms, BIM teams, designers, and project managers.
+
+A web CRM, an AI assistant, and a Revit desktop add-in share one SQL Server database. Client briefs become tracked requirements and tasks. Model checks open issues, assign the project designer, and notify the team. AI task plans stay **Proposed** until a project manager approves them.
+
+## Repository layout
 
 ```text
-backend/
-├── DesignFlow.sln
-└── src/
-    ├── DesignFlow.Api/              Controllers, JWT, Swagger, exception handling
-    ├── DesignFlow.Application/      Services, DTOs, FluentValidation, workflow rules
-    ├── DesignFlow.Domain/           Entities and enums matching database/
-    ├── DesignFlow.Infrastructure/   EF Core, AI providers, Autodesk clients, job worker
-    └── DesignFlow.Tests/            xUnit tests for workflow and AI rules
+DesignFlowAI/
+├── Backend/        ASP.NET Core 8 Web API
+├── Frontend/       Angular CRM studio
+├── database/       SQL Server scripts
+├── revit-addin/    Revit 2025/2026 plugins
+├── docs/           Architecture and setup
+├── .gitignore
+└── README.md
 ```
 
-## Run
+## Run the backend
+
+Load the database, then from `Backend/`:
 
 ```powershell
 dotnet run --project src/DesignFlow.Api
 ```
 
-- Swagger: `http://localhost:5080/swagger`
-- Development database: `(localdb)\MSSQLLocalDB` / `DesignFlowAI`
-- Development login: `maya.chen@designflow.ai` / `DesignFlow123!`
+Swagger: `http://localhost:5080/swagger`. Sign in as `maya.chen@designflow.ai` / `DesignFlow123!` after the API has replaced the seed password hashes. Full steps are in [docs/SETUP.md](docs/SETUP.md).
 
-The API replaces the seed placeholder password hash the first time it starts in Development.
+SQL Server 2019 or newer, or SQL Server LocalDB. Details and the `sqlcmd` order are in [database/README.md](database/README.md) and [docs/SETUP.md](docs/SETUP.md).
+
+From `database/` in PowerShell:
 
 ```powershell
-dotnet test
+.\run.ps1 -Server "localhost"
 ```
 
-## HTTP surface
+LocalDB:
 
-| Method | Path | Who |
-| --- | --- | --- |
-| POST | `/api/auth/login` | Anonymous |
-| POST | `/api/auth/register` | Anonymous (Client or Designer) |
-| GET, POST | `/api/clients` | Staff; create is manager |
-| GET, POST | `/api/projects` | Authenticated; create is manager |
-| GET | `/api/projects/{id}` | Authenticated |
-| POST | `/api/projects/{id}/requirements` | Staff |
-| POST | `/api/projects/{id}/plan` | Staff; saves tasks as Proposed |
-| POST | `/api/projects/{id}/task-plans/approve` | Manager |
-| POST | `/api/projects/{id}/task-plans/reject` | Manager |
-| GET | `/api/projects/{id}/reports` | Authenticated |
-| GET | `/api/issues` | Authenticated |
-| POST | `/api/issues/{id}/assign` | Manager |
-| POST | `/api/revit/models/sync` | Staff |
-| POST | `/api/revit/validation-runs` | Staff |
-| POST | `/api/automation/jobs` | Staff |
-| GET | `/api/automation/jobs/{id}` | Staff |
-| POST | `/api/ai/requirements/analyze` | Staff |
-| POST | `/api/ai/commands/preview` | Staff |
-| POST | `/api/ai/commands/execute` | Staff, `confirm: true` required |
-| POST | `/api/ai/ask` | Staff |
-| POST | `/api/webhooks/aps` | APS callback |
-| GET | `/api/system/integrations` | Manager |
+```powershell
+.\run.ps1 -Server "(localdb)\MSSQLLocalDB"
+```
 
-A failed validation run opens issues, assigns the project's lead designer, sets the project to `NeedsAttention`, and writes a notification. AI task plans stay `Proposed` until a manager approves them. Revit commands must be on the whitelist (`FindDoorsMissingFireRating`, `FindRoomsWithoutNames`, `FindUnplacedRooms`, `FindMissingSheetParameters`). Execute reads stored validation rows and does not invent elements.
+The scripts are idempotent. In Development, the API replaces the placeholder password hash with an Identity hash for `DesignFlow123!` the first time it starts.
+
+## Run the frontend
+
+```powershell
+cd Frontend
+npm install
+npm start
+```
+
+Open http://localhost:4200 and sign in as `maya.chen@designflow.ai` / `DesignFlow123!`. The API must be running at http://localhost:5080.
+
+## Workflow rules already encoded in SQL
+
+- `dbo.usp_CreateIssuesFromFailedValidation` — a **Failed** validation run opens an issue per failed check, assigns the project’s lead designer, sets the project to `NeedsAttention`, and writes a notification.
+- `dbo.usp_ApproveProposedTasks` — AI tasks in status `Proposed` become `ToDo` only after an Admin or ProjectManager approves them. Until then they are not active work.
+- `dbo.usp_RejectProposedTasks` — the same rows become `Rejected` and never enter the board.
+
+The seed calls the failed-validation procedure for the Sharma residence model, so issues and the notification are produced by that rule.
 
 ## Credentials
 
-`appsettings.Development.json` has placeholders only. Set real values with user-secrets or environment variables:
-
-- `Jwt:Key` / `Jwt__Key`
-- `Ai:Provider`, `Ai:ApiKey` (`OpenAI` or `AzureOpenAI`)
-- `Autodesk:ClientId`, `Autodesk:ClientSecret`
-
-Empty Autodesk and AI keys select the mock clients. Data Management, Design Automation, and webhook registration are stubs. APS token auth and Model Derivative translation are implemented and used when credentials are present.
+Autodesk APS and AI provider keys stay in backend user-secrets or environment variables. They are not committed and they do not belong in the frontend. Empty values keep the mock providers.

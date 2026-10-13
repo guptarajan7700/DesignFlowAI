@@ -1,0 +1,231 @@
+@if (missing()) {
+  <div class="card empty"><h1>Project not found</h1><a class="btn" routerLink="/projects">Back to projects</a></div>
+} @else if (!project()) {
+  <div class="card"><div class="sk"></div><div class="sk" style="width:40%;margin-top:12px"></div></div>
+} @else {
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">{{ project()!.code }} · {{ project()!.clientName }}</p>
+      <h1>{{ project()!.name }}</h1>
+      <p class="lede">{{ project()!.description || 'No description yet.' }}</p>
+    </div>
+    <div class="page-actions">
+      <span [class]="'chip ' + tone(project()!.status)">{{ labelize(project()!.status) }}</span>
+      <a class="btn" [routerLink]="['/viewer']" [queryParams]="{ project: project()!.projectId }">Open model</a>
+    </div>
+  </header>
+
+  <section class="kpi-row">
+    @if (!auth.isDesigner()) {
+      <article class="kpi"><span>Budget</span><strong>{{ money(project()!.budget, project()!.currency) }}</strong><em>{{ money(project()!.spent, project()!.currency) }} spent</em></article>
+    } @else {
+      <article class="kpi"><span>Models</span><strong>{{ project()!.models.length }}</strong><em>synced for this room</em></article>
+    }
+    <article class="kpi"><span>Due</span><strong style="font-size:1.2rem">{{ prettyDate(project()!.dueDate) }}</strong><em>{{ auth.isClient() ? (project()!.projectManagerName || 'Your studio contact') : (project()!.leadDesignerName || 'No lead designer') }}</em></article>
+    <article class="kpi"><span>Open issues</span><strong>{{ auth.isDesigner() ? myIssues().length : issues().length }}</strong><em>{{ auth.isDesigner() ? 'assigned to you' : 'on this project' }}</em></article>
+    @if (auth.isManager()) {
+      <article class="kpi"><span>Proposed</span><strong>{{ proposed().length }}</strong><em>waiting for approval</em></article>
+    } @else if (auth.isDesigner()) {
+      <article class="kpi"><span>My tasks</span><strong>{{ activeTasks().length }}</strong><em>on the board</em></article>
+    } @else {
+      <article class="kpi"><span>Milestones</span><strong>{{ project()!.milestones.length }}</strong><em>on the schedule</em></article>
+    }
+  </section>
+
+  <div class="tabs">
+    @for (item of tabs; track item) {
+      <button type="button" [class.on]="tab() === item" (click)="show(item)">{{ item }}</button>
+    }
+  </div>
+
+  @if (tab() === 'overview') {
+    <section class="two">
+      <article class="card">
+        <h2>Team</h2>
+        <p>Manager · {{ project()!.projectManagerName || 'Unassigned' }}</p>
+        <p>Designer · {{ project()!.leadDesignerName || 'Unassigned' }}</p>
+        <p class="muted">{{ project()!.siteAddress || 'Site address not set' }}</p>
+      </article>
+      <article class="card">
+        <h2>Milestones</h2>
+        <div class="list" style="margin-top:12px">
+          @for (mile of project()!.milestones; track mile.milestoneId) {
+            <div class="row-card">
+              <div class="meta"><strong>{{ mile.name }}</strong><span [class]="'chip ' + tone(mile.status)">{{ labelize(mile.status) }}</span></div>
+              <small class="muted">{{ prettyDate(mile.dueDate) }}</small>
+            </div>
+          }
+          @if (!project()!.milestones.length) { <p class="muted">No milestones yet.</p> }
+        </div>
+      </article>
+    </section>
+  }
+
+  @if (tab() === 'requirements') {
+    <section class="two">
+      <article class="card">
+        <h2>Scope</h2>
+        <div class="list" style="margin-top:12px">
+          @for (item of project()!.requirements; track item.requirementId) {
+            <div class="row-card">
+              <div class="meta"><strong>{{ item.title }}</strong><span [class]="'chip ' + tone(item.priority)">{{ item.priority }}</span></div>
+              <small class="muted">{{ item.category }} · {{ item.source }}</small>
+            </div>
+          }
+        </div>
+        @if (auth.isStaff()) {
+          <form style="margin-top:16px" (ngSubmit)="addRequirement()">
+            <label class="field"><span>Add requirement</span><input name="req" [(ngModel)]="reqTitle" /></label>
+            <div class="split">
+              <select name="cat" [(ngModel)]="reqCategory"><option>General</option><option>Room</option><option>Style</option><option>Constraint</option><option>Material</option></select>
+              <select name="pri" [(ngModel)]="reqPriority"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select>
+            </div>
+            <button class="btn" type="submit">Add</button>
+          </form>
+        }
+      </article>
+      @if (auth.isStaff()) {
+      <article class="card">
+        <h2>Analyze a brief</h2>
+        <p class="lede">This writes rooms, style, and constraints onto the project. It does not create active tasks.</p>
+        <textarea name="brief" [(ngModel)]="brief" placeholder="2BHK, warm oak, budget 45 lakh, fire-rated entry door..."></textarea>
+        <div class="page-actions">
+          <button class="btn primary" type="button" [disabled]="busy()" (click)="analyze()">Analyze brief</button>
+          <button class="btn teal" type="button" [disabled]="busy()" (click)="plan()">Propose task plan</button>
+        </div>
+        @if (analysis()) {
+          <div class="row-card" style="margin-top:12px">
+            <strong>{{ analysis()!.analysis.style }}</strong>
+            <p>Rooms: {{ analysis()!.analysis.rooms.join(', ') || 'none detected' }}</p>
+            <p>Constraints: {{ analysis()!.analysis.constraints.join(', ') || 'none' }}</p>
+          </div>
+        }
+      </article>
+      }
+    </section>
+  }
+
+  @if (tab() === 'tasks') {
+    <section class="two">
+      <article class="card">
+        <h2>Active work</h2>
+        @for (task of activeTasks(); track task.taskId) {
+          <div class="row-card" style="margin-top:10px">
+            <div class="meta"><strong>{{ task.title }}</strong><span [class]="'chip ' + tone(task.status)">{{ labelize(task.status) }}</span></div>
+            <small class="muted">{{ task.assigneeName || 'Unassigned' }} · {{ prettyDate(task.dueDate) }} · {{ task.priority }}</small>
+          </div>
+        }
+        @if (!activeTasks().length) { <p class="muted">No active tasks. Approve a plan or add one.</p> }
+      </article>
+      @if (auth.isManager()) {
+        <form class="card" (ngSubmit)="addTask()">
+          <h2>Add a task</h2>
+          <label class="field"><span>Title</span><input name="title" [(ngModel)]="taskTitle" required /></label>
+          <label class="field"><span>Priority</span>
+            <select name="priority" [(ngModel)]="taskPriority"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select>
+          </label>
+          <label class="field"><span>Designer</span>
+            <select name="assignee" [(ngModel)]="taskAssignee">
+              <option value="">Unassigned</option>
+              @for (person of designers(); track person.userId) { <option [value]="person.userId">{{ person.fullName }}</option> }
+            </select>
+          </label>
+          <label class="field"><span>Due</span><input name="due" type="date" [(ngModel)]="taskDue" /></label>
+          <button class="btn primary" type="submit">Add to To Do</button>
+        </form>
+      }
+    </section>
+  }
+
+  @if (tab() === 'models') {
+    <section class="two">
+      <div class="card-grid">
+        @for (model of project()!.models; track model.revitModelId) {
+          <article class="project-card">
+            <div class="cover"></div>
+            <strong>{{ model.name }}</strong>
+            <p class="muted">{{ model.fileName }}</p>
+            <span [class]="'chip ' + tone(model.status)">{{ model.status }}</span>
+            <small class="muted">{{ model.autodeskUrn ? 'URN on file' : 'No Autodesk URN yet' }}</small>
+          </article>
+        }
+        @if (!project()!.models.length) { <div class="card empty">No models synced yet.</div> }
+      </div>
+      @if (auth.isStaff()) {
+        <form class="card" (ngSubmit)="syncModel()">
+          <h2>Record a model</h2>
+          <label class="field"><span>Name</span><input name="mname" [(ngModel)]="modelName" /></label>
+          <label class="field"><span>File</span><input name="mfile" [(ngModel)]="modelFile" placeholder="Residence.rvt" /></label>
+          <button class="btn primary" type="submit">Sync record</button>
+        </form>
+      }
+    </section>
+  }
+
+  @if (tab() === 'issues') {
+    <div class="list">
+      @for (issue of issues(); track issue.issueId) {
+        <article class="row-card">
+          <div class="meta"><strong>{{ issue.title }}</strong><span [class]="'chip ' + tone(issue.severity)">{{ issue.severity }}</span></div>
+          <p>{{ issue.description }}</p>
+          <small class="muted">Element {{ issue.elementId || '—' }} · {{ issue.assignedToName || 'Unassigned' }} · {{ issue.suggestedFix || 'No suggested fix' }}</small>
+        </article>
+      }
+      @if (!issues().length) { <div class="card empty">No issues on this project.</div> }
+    </div>
+  }
+
+  @if (tab() === 'reports') {
+    @if (!report()) {
+      <div class="card"><div class="sk"></div></div>
+    } @else {
+      <article class="card">
+        <p class="eyebrow">{{ report()!.aiSummaryLabel }}</p>
+        <h2>{{ report()!.name }} · {{ report()!.passRatePercent }}% pass rate</h2>
+        <p style="white-space:pre-wrap">{{ report()!.aiSummary }}</p>
+        <div class="list" style="margin-top:12px">
+          @for (check of report()!.validationResults; track check.checkCode + (check.elementId || '')) {
+            <div class="row-card">
+              <div class="meta"><strong>{{ check.checkName }}</strong><span [class]="'chip ' + tone(check.status)">{{ check.status }}</span></div>
+              <p>{{ check.message }}</p>
+              <small class="muted">Element {{ check.elementId || '—' }}</small>
+            </div>
+          }
+        </div>
+      </article>
+    }
+  }
+
+  @if (tab() === 'approvals') {
+    <section class="two">
+      <article class="card">
+        <h2>Proposed AI tasks</h2>
+        <p class="lede">These are not on the board until a manager approves them.</p>
+        @for (task of proposed(); track task.taskId) {
+          <div class="row-card" style="margin-top:10px">
+            <strong>{{ task.title }}</strong>
+            <div class="meta"><span>{{ task.priority }}</span><span>{{ task.labels || 'General' }}</span></div>
+          </div>
+        }
+        @if (!proposed().length) { <p class="muted">No proposed plan is waiting.</p> }
+        @if (auth.isManager() && proposed().length) {
+          <label class="field" style="margin-top:12px"><span>Review note</span><textarea name="comments" [(ngModel)]="comments"></textarea></label>
+          <div class="page-actions">
+            <button class="btn teal" type="button" (click)="approve(true)">Approve plan</button>
+            <button class="btn danger" type="button" (click)="approve(false)">Reject plan</button>
+          </div>
+        }
+      </article>
+      <article class="card">
+        <h2>Decision history</h2>
+        <button class="btn" type="button" (click)="show('reports')">Load report</button>
+        @for (approval of report()?.approvals ?? []; track approval.approvalId) {
+          <div class="row-card" style="margin-top:10px">
+            <div class="meta"><strong>{{ approval.entityType }}</strong><span [class]="'chip ' + tone(approval.status)">{{ approval.status }}</span></div>
+            <p>{{ approval.comments || 'No comments' }}</p>
+          </div>
+        }
+      </article>
+    </section>
+  }
+}

@@ -1,0 +1,56 @@
+<header class="page-head">
+  <div>
+    <h1>Automation</h1>
+    <p class="lede">Queue a model translation or design-automation job. The background worker moves it off Queued.</p>
+  </div>
+</header>
+
+<section class="two">
+  <form class="card" (ngSubmit)="enqueue()">
+    <h2>New job</h2>
+    <label class="field"><span>Project</span>
+      <select name="project" [(ngModel)]="projectId">
+        <option value="">Studio-wide</option>
+        @for (project of projects(); track project.projectId) { <option [value]="project.projectId">{{ project.code }}</option> }
+      </select>
+    </label>
+    <label class="field"><span>Type</span>
+      <select name="type" [(ngModel)]="jobType">
+        @for (type of types; track type) { <option [value]="type">{{ type }}</option> }
+      </select>
+    </label>
+    <button class="btn primary" type="submit">Queue job</button>
+  </form>
+  <article class="card">
+    <h2>Latest status</h2>
+    @if (selected(); as job) {
+      <p><span [class]="'chip ' + tone(job.status)">{{ job.status }}</span> {{ job.progressPercent }}%</p>
+      <div class="progress"><span [style.width.%]="job.progressPercent"></span></div>
+      <p class="muted">{{ job.errorMessage || job.resultPayload || 'Waiting for the worker.' }}</p>
+    } @else {
+      <p class="muted">Select a job to watch it.</p>
+    }
+  </article>
+</section>
+
+@if (loading()) {
+  <div class="card" style="margin-top:16px"><div class="sk"></div></div>
+} @else {
+  <div class="table-wrap" style="margin-top:16px">
+    <table>
+      <thead><tr><th>Type</th><th>Status</th><th>Progress</th><th>Created</th><th></th></tr></thead>
+      <tbody>
+        @for (job of jobs(); track job.automationJobId) {
+          <tr (click)="selected.set(job)">
+            <td>{{ job.jobType }}</td>
+            <td><span [class]="'chip ' + tone(job.status)">{{ job.status }}</span></td>
+            <td>{{ job.progressPercent }}%</td>
+            <td>{{ prettyDate(job.createdAt) }}</td>
+            <td><button class="btn" type="button" (click)="$event.stopPropagation(); watch(job.automationJobId)">Refresh</button></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (!jobs().length) { <p class="empty">No jobs yet.</p> }
+  </div>
+}

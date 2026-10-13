@@ -1,0 +1,74 @@
+<header class="page-head">
+  <div>
+    <h1>Issues</h1>
+    <p class="lede">
+      @if (auth.isDesigner()) { Model checks assigned to you. }
+      @else { Defects opened from failed model checks. Nothing here is invented by the assistant. }
+    </p>
+  </div>
+</header>
+
+<div class="toolbar">
+  <select style="max-width:220px" [(ngModel)]="projectId" name="project" (ngModelChange)="load()">
+    <option value="">All projects</option>
+    @for (project of projects(); track project.projectId) { <option [value]="project.projectId">{{ project.code }}</option> }
+  </select>
+  <select style="max-width:160px" [(ngModel)]="severity" name="severity" (ngModelChange)="load()">
+    <option value="">Any severity</option>
+    <option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
+  </select>
+  <select style="max-width:160px" [(ngModel)]="status" name="status" (ngModelChange)="load()">
+    <option value="">Any status</option>
+    <option>Open</option><option>Assigned</option><option>InProgress</option><option>Resolved</option><option>Closed</option>
+  </select>
+</div>
+
+@if (loading()) {
+  <div class="card"><div class="sk"></div></div>
+} @else if (!issues().length) {
+  <div class="card empty"><h2>No issues match</h2><p>Clear a filter, or run a validation that finds a real defect.</p></div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Issue</th><th>Project</th><th>Severity</th><th>Status</th><th>Assignee</th><th>Opened</th></tr></thead>
+      <tbody>
+        @for (issue of issues(); track issue.issueId) {
+          <tr (click)="open(issue)">
+            <td><strong>{{ issue.title }}</strong><div class="muted">Element {{ issue.elementId || '—' }}</div></td>
+            <td>{{ issue.projectCode }}</td>
+            <td><span [class]="'chip ' + tone(issue.severity)">{{ issue.severity }}</span></td>
+            <td><span [class]="'chip ' + tone(issue.status)">{{ issue.status }}</span></td>
+            <td>{{ issue.assignedToName || 'Unassigned' }}</td>
+            <td>{{ prettyDate(issue.createdAt) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (selected(); as issue) {
+  <div class="backdrop" (click)="selected.set(null)">
+    <aside class="drawer" (click)="$event.stopPropagation()">
+      <p class="eyebrow">{{ issue.projectCode }}</p>
+      <h2>{{ issue.title }}</h2>
+      <p>{{ issue.description }}</p>
+      <p><span [class]="'chip ' + tone(issue.severity)">{{ issue.severity }}</span> <span [class]="'chip ' + tone(issue.status)">{{ issue.status }}</span></p>
+      <p class="muted">Element {{ issue.elementId || 'not specified' }}</p>
+      <p>{{ issue.suggestedFix || 'No suggested fix was stored with this check.' }}</p>
+      <a [routerLink]="['/projects', issue.projectId]">Open project</a>
+      @if (auth.isManager()) {
+        <form style="margin-top:18px" (ngSubmit)="assign()">
+          <label class="field"><span>Assign designer</span>
+            <select name="assignee" [(ngModel)]="assigneeId">
+              <option value="">Select</option>
+              @for (person of people(); track person.userId) { <option [value]="person.userId">{{ person.fullName }}</option> }
+            </select>
+          </label>
+          <button class="btn primary" type="submit">Assign and notify</button>
+        </form>
+      }
+      <button class="btn ghost" type="button" style="margin-top:12px" (click)="selected.set(null)">Close</button>
+    </aside>
+  </div>
+}

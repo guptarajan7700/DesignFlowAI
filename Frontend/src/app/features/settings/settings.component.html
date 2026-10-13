@@ -1,0 +1,48 @@
+<header class="page-head">
+  <div>
+    <h1>Settings</h1>
+    <p class="lede">Your profile and how the studio is connected. Secrets stay on the server.</p>
+  </div>
+</header>
+
+<section class="two">
+  <article class="card">
+    <p class="eyebrow">Profile</p>
+    <h2>{{ auth.displayName() }}</h2>
+    <p>{{ auth.user()?.email }}</p>
+    <p class="muted">{{ auth.roles().map(labelize).join(' · ') || 'No role' }}</p>
+    <p>{{ auth.user()?.phone || 'No phone on the account' }}</p>
+  </article>
+  <article class="card">
+    <p class="eyebrow">Appearance</p>
+    <h2>{{ theme.mode() === 'dark' ? 'Dark studio' : 'Daylight studio' }}</h2>
+    <p class="lede">The choice is saved in this browser and starts from your system setting.</p>
+    <div class="seg">
+      <button type="button" [class.on]="theme.mode() === 'light'" (click)="theme.set('light')">Light</button>
+      <button type="button" [class.on]="theme.mode() === 'dark'" (click)="theme.set('dark')">Dark</button>
+    </div>
+  </article>
+</section>
+
+@if (auth.isManager()) {
+  <article class="card" style="margin-top:16px">
+    <h2>Integrations</h2>
+    @if (integrations(); as status) {
+      <div class="card-grid" style="margin-top:12px">
+        <div class="row-card"><strong>AI</strong><p>{{ status.aiProvider }}</p></div>
+        <div class="row-card"><strong>Autodesk</strong><p>{{ status.autodeskConfigured ? 'Credentials present' : 'Using local stand-ins' }}</p></div>
+        <div class="row-card"><strong>Authentication</strong><p>{{ status.authentication }}</p></div>
+        <div class="row-card"><strong>Model Derivative</strong><p>{{ status.modelDerivative }}</p></div>
+        <div class="row-card"><strong>Data Management</strong><p>{{ status.dataManagement }}</p></div>
+        <div class="row-card"><strong>Design Automation</strong><p>{{ status.designAutomation }}</p></div>
+      </div>
+    } @else {
+      <p class="muted">{{ note() || 'Loading connection status…' }}</p>
+    }
+  </article>
+} @else {
+  <article class="card" style="margin-top:16px">
+    <h2>Integrations</h2>
+    <p class="muted">Connection status is visible to project managers and admins.</p>
+  </article>
+}

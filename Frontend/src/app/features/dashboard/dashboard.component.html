@@ -1,0 +1,153 @@
+<header class="page-head">
+  <div>
+    <h1>Good to see you, {{ auth.user()?.firstName }}.</h1>
+    <p class="lede">
+      @if (auth.isClient()) { Progress on the rooms commissioned with the studio. }
+      @else if (auth.isDesigner()) { Rooms you lead, issues assigned to you, and dates coming due. }
+      @else { Live studio pulse from projects, open issues, and the validation record. }
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" routerLink="/projects">Open projects</a>
+    @if (auth.isStaff()) {
+      <a class="btn primary" routerLink="/assistant">Ask the studio</a>
+    }
+  </div>
+</header>
+
+@if (loading()) {
+  <div class="kpi-row">
+    @for (item of [1, 2, 3, 4]; track item) {
+      <article class="kpi"><div class="sk"></div><div class="sk" style="margin-top:12px;width:40%"></div></article>
+    }
+  </div>
+} @else {
+  <section class="kpi-row">
+    <article class="kpi">
+      <span>{{ auth.isClient() ? 'Your projects' : auth.isDesigner() ? 'My projects' : 'Active projects' }}</span>
+      <strong>{{ projects().length }}</strong>
+      <em>{{ auth.isClient() ? 'with the studio' : auth.isDesigner() ? 'you lead' : 'in the studio' }}</em>
+    </article>
+    <article class="kpi"><span>Open issues</span><strong>{{ openIssues() }}</strong><em>{{ auth.isDesigner() ? 'assigned to you' : 'from model checks' }}</em></article>
+    @if (auth.isClient()) {
+      <article class="kpi"><span>Next due</span><strong style="font-size:1.15rem">{{ prettyDate(nextDue()) }}</strong><em>on your project</em></article>
+      <article class="kpi"><span>Budget</span><strong>{{ money(budget(), currency()) }}</strong><em>{{ money(spent(), currency()) }} spent</em></article>
+    } @else if (auth.isDesigner()) {
+      <article class="kpi"><span>Overdue tasks</span><strong>{{ overdue() }}</strong><em>on your projects</em></article>
+      <article class="kpi"><span>Needs a look</span><strong>{{ attention() }}</strong><em>projects flagged</em></article>
+    } @else {
+      <article class="kpi"><span>Overdue tasks</span><strong>{{ overdue() }}</strong><em>past their due date</em></article>
+      <article class="kpi"><span>Pipeline</span><strong>{{ money(budget(), currency()) }}</strong><em>{{ proposed() }} AI tasks awaiting approval</em></article>
+    }
+  </section>
+
+  <section class="three">
+    <article class="card">
+      <h2>Project mix</h2>
+      <div class="donut-wrap" style="margin-top:16px">
+        <div class="donut" [style.background]="donut()"><span>{{ projects().length }}</span></div>
+        <div class="legend">
+          @for (slice of slices(); track slice.label) {
+            <div><i class="swatch" [style.background]="slice.color"></i>{{ labelize(slice.label) }} · {{ slice.count }}</div>
+          }
+          @if (!slices().length) { <p>No projects yet.</p> }
+        </div>
+      </div>
+    </article>
+    <article class="card">
+      <h2>Issue severity</h2>
+      <div class="bars" style="margin-top:16px">
+        @for (bar of severities(); track bar.level) {
+          <div class="bar-line">
+            <span>{{ bar.level }}</span>
+            <div class="bar"><i [style.width.%]="(bar.count / maxSeverity()) * 100"></i></div>
+            <strong>{{ bar.count }}</strong>
+          </div>
+        }
+      </div>
+    </article>
+    <article class="card">
+      @if (auth.isManager()) {
+        <h2>Designer load</h2>
+        <div class="list" style="margin-top:16px">
+          @for (person of workload(); track person.name) {
+            <div class="row-card" style="display:flex;justify-content:space-between">
+              <span>{{ person.name }}</span>
+              <strong>{{ person.count }}</strong>
+            </div>
+          }
+          @if (!workload().length) { <p class="muted">No assigned issues.</p> }
+        </div>
+      } @else {
+        <h2>{{ auth.isClient() ? 'Open on your project' : 'Assigned to you' }}</h2>
+        <div class="list" style="margin-top:16px">
+          @for (issue of issues().slice(0, 5); track issue.issueId) {
+            <div class="row-card">
+              <strong>{{ issue.title }}</strong>
+              <div class="muted">{{ issue.projectCode }} · {{ issue.severity }}</div>
+            </div>
+          }
+          @if (!issues().length) { <p class="muted">Nothing is waiting.</p> }
+        </div>
+      }
+    </article>
+  </section>
+
+  <section class="two" style="margin-top:16px">
+    <article class="card">
+      <div class="toolbar" style="margin-bottom:8px">
+        <h2>Projects needing a look</h2>
+        <a routerLink="/projects">View all</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Project</th><th>Status</th><th>Due</th><th>Issues</th></tr></thead>
+          <tbody>
+            @for (project of projects(); track project.projectId) {
+              <tr [routerLink]="['/projects', project.projectId]">
+                <td><strong>{{ project.code }}</strong><div class="muted">{{ project.name }}</div></td>
+                <td><span [class]="'chip ' + tone(project.status)">{{ labelize(project.status) }}</span></td>
+                <td>{{ prettyDate(project.dueDate) }}</td>
+                <td>{{ project.openIssueCount }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      @if (auth.isStaff()) {
+        <article class="card" style="background:linear-gradient(160deg,#1e1b4b,#312e81);color:white">
+          <p class="eyebrow" style="color:#c4b5fd">From studio records</p>
+          <h2>AI insight</h2>
+          <p style="white-space:pre-wrap;line-height:1.5">{{ insight() }}</p>
+        </article>
+      }
+      <article class="card">
+        <h2>Milestones</h2>
+        <div class="list" style="margin-top:12px">
+          @for (mile of milestones(); track mile.milestoneId) {
+            <a class="row-card" [routerLink]="['/projects', mile.projectId]" style="text-decoration:none">
+              <strong>{{ mile.name }}</strong>
+              <div class="meta"><span>{{ mile.project }}</span><span>{{ prettyDate(mile.dueDate) }}</span></div>
+            </a>
+          }
+          @if (!milestones().length) { <p class="muted">No upcoming milestones.</p> }
+        </div>
+      </article>
+      <article class="card">
+        <h2>Activity</h2>
+        <div class="list" style="margin-top:12px">
+          @for (note of notes().slice(0, 4); track note.notificationId) {
+            <div class="row-card">
+              <strong>{{ note.title }}</strong>
+              <div class="muted">{{ note.message }}</div>
+              <small>{{ relative(note.createdAt) }}</small>
+            </div>
+          }
+          @if (!notes().length) { <p class="muted">No recent alerts.</p> }
+        </div>
+      </article>
+    </div>
+  </section>
+}

@@ -1,0 +1,71 @@
+<header class="page-head">
+  <div>
+    <h1>Reports</h1>
+    <p class="lede">
+      @if (auth.isClient()) { How the checks on your project turned out. }
+      @else { Pass rate and narrative are built only from stored validation results. }
+    </p>
+  </div>
+  <select style="max-width:320px" [(ngModel)]="projectId" name="project" (ngModelChange)="load()">
+    @for (project of projects(); track project.projectId) {
+      <option [value]="project.projectId">{{ project.code }} · {{ project.name }}</option>
+    }
+  </select>
+</header>
+
+@if (loading()) {
+  <div class="card"><div class="sk"></div></div>
+}
+@if (report(); as report) {
+  <section class="kpi-row">
+    <article class="kpi"><span>Pass rate</span><strong>{{ report.passRatePercent }}%</strong><em>{{ report.status }}</em></article>
+    <article class="kpi"><span>Passed checks</span><strong>{{ passed() }}</strong><em>stored results</em></article>
+    <article class="kpi"><span>Failed checks</span><strong>{{ failed() }}</strong><em>only real failures</em></article>
+    <article class="kpi"><span>Open issues</span><strong>{{ report.openIssueCount }}</strong><em>{{ auth.isClient() ? 'still open' : report.overdueTaskCount + ' overdue tasks' }}</em></article>
+  </section>
+  <section class="two">
+    <article class="card">
+      <p class="eyebrow">{{ report.aiSummaryLabel }}</p>
+      <h2>{{ report.name }}</h2>
+      <p style="white-space:pre-wrap;line-height:1.55">{{ report.aiSummary }}</p>
+    </article>
+    <article class="card">
+      <h2>Checks</h2>
+      <div class="bars" style="margin-top:16px">
+        <div class="bar-line"><span>Passed</span><div class="bar"><i [style.width.%]="report.passRatePercent"></i></div><strong>{{ passed() }}</strong></div>
+        <div class="bar-line"><span>Failed</span><div class="bar"><i [style.width.%]="100 - report.passRatePercent" style="background:#e11d48"></i></div><strong>{{ failed() }}</strong></div>
+      </div>
+      <div class="list" style="margin-top:16px">
+        @for (check of report.validationResults; track check.checkCode + (check.elementId || check.message)) {
+          <div class="row-card">
+            <div class="meta"><strong>{{ check.checkName }}</strong><span [class]="'chip ' + tone(check.status)">{{ check.status }}</span></div>
+            <p>{{ check.message }}</p>
+            <small class="muted">Element {{ check.elementId || '—' }}</small>
+          </div>
+        }
+      </div>
+    </article>
+  </section>
+  <section class="two" style="margin-top:16px">
+    <article class="card">
+      <h2>Approvals</h2>
+      @for (item of report.approvals; track item.approvalId) {
+        <div class="row-card" style="margin-top:10px">
+          <div class="meta"><strong>{{ item.entityType }}</strong><span [class]="'chip ' + tone(item.status)">{{ item.status }}</span></div>
+          <p>{{ item.comments || 'No comments' }}</p>
+        </div>
+      }
+      @if (!report.approvals.length) { <p class="muted">No approval records.</p> }
+    </article>
+    <article class="card">
+      <h2>Sheet revisions</h2>
+      @for (item of report.revisions; track item.drawingRevisionId) {
+        <div class="row-card" style="margin-top:10px">
+          <strong>{{ item.sheetNumber }} · {{ item.sheetName }}</strong>
+          <p class="muted">Rev {{ item.revisionCode }} · {{ item.description }}</p>
+        </div>
+      }
+      @if (!report.revisions.length) { <p class="muted">No issued revisions.</p> }
+    </article>
+  </section>
+}

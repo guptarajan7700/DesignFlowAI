@@ -1,0 +1,39 @@
+<header class="page-head">
+  <div>
+    <h1>Task board</h1>
+    <p class="lede">
+      @if (auth.isDesigner()) { Work assigned to you. Drag a card when its status changes. }
+      @else { Drag approved work between columns. Proposed AI tasks stay off this board until a manager accepts them. }
+    </p>
+  </div>
+  <select style="max-width:260px" [(ngModel)]="projectId" name="project">
+    <option value="all">All projects</option>
+    @for (project of projects(); track project.projectId) {
+      <option [value]="project.projectId">{{ project.code }}</option>
+    }
+  </select>
+</header>
+
+@if (loading()) {
+  <div class="board">
+    @for (lane of lanes; track lane) { <article class="lane"><div class="sk"></div></article> }
+  </div>
+} @else {
+  <section class="board">
+    @for (lane of lanes; track lane) {
+      <article class="lane" [class.over]="over() === lane" (dragover)="$event.preventDefault(); over.set(lane)" (dragleave)="over.set('')" (drop)="drop(lane)">
+        <header>
+          <strong>{{ labelize(lane) }}</strong>
+          <span class="chip">{{ laneTasks(lane).length }}</span>
+        </header>
+        @for (task of laneTasks(lane); track task.taskId) {
+          <article class="task" draggable="true" (dragstart)="drag(task)">
+            <h3>{{ task.title }}</h3>
+            <div class="meta"><span>{{ task.projectCode }}</span><span [class]="'chip ' + tone(task.priority)">{{ task.priority }}</span></div>
+            <small class="muted">{{ task.assigneeName || 'Unassigned' }} · {{ prettyDate(task.dueDate) }}</small>
+          </article>
+        }
+      </article>
+    }
+  </section>
+}
